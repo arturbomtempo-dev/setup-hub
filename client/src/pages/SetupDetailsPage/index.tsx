@@ -42,7 +42,9 @@ export function SetupDetailsPage() {
         async function loadSetupData() {
             try {
                 setIsLoading(true);
-                // TODO: passo 1 — substitua este comentário pelo bloco do INTEGRATION.md
+                // TODO: buscar o setup e os gear items em paralelo usando Promise.all.
+                // Use setupService.getById(id) e gearItemService.listBySetup(id),
+                // depois salve os resultados com setSetup e setGearItems.
             } catch (error) {
                 toast.error(getErrorMessage(error));
             } finally {
@@ -64,11 +66,14 @@ export function SetupDetailsPage() {
     const totalGear = useMemo(() => gearItemService.sumPrices(gearItems), [gearItems]);
 
     async function handleGearSubmit(_payload: GearItemPayload, _gearId?: string) {
-        // TODO: passo 2 — substitua este comentário pelo bloco do INTEGRATION.md
+        // TODO: integrar o envio do formulário de gear item.
+        // Se _gearId existir, é uma edição: chame gearItemService.update e atualize o item na lista.
+        // Se não existir, é um cadastro: chame gearItemService.create e adicione o item à lista.
     }
 
     async function handleGearRemove(_gearId: string) {
-        // TODO: passo 3 — substitua este comentário pelo bloco do INTEGRATION.md
+        // TODO: remover o gear item da API e atualizar a lista no estado.
+        // Chame gearItemService.remove(_gearId) e depois filtre gearItems para remover o item.
     }
 
     async function handleDeleteSetup() {
@@ -83,7 +88,7 @@ export function SetupDetailsPage() {
                 const status = error.response?.status;
                 if (status === 409 || status === 500) {
                     toast.error(
-                        'Este setup possui itens vinculados. Remova todos os gear items antes de excluí-lo.',
+                        'Este setup possui itens vinculados. Remova todos os gear items antes de excluí-lo.'
                     );
                 } else {
                     toast.error(getErrorMessage(error));

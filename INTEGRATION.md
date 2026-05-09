@@ -87,13 +87,13 @@ O CRUD completo — tanto de **setup** quanto de **gear items** — está totalm
 
 ## Como integrar — passo a passo
 
-Abra `src/pages/SetupDetailsPage/index.tsx`. Você vai encontrar três comentários `// TODO`. Para cada um, **selecione a linha do comentário, apague e cole o bloco correspondente abaixo**.
+Abra `src/pages/SetupDetailsPage/index.tsx`. Você vai encontrar três comentários `// TODO`. Leia a explicação de cada passo, entenda o que o código faz e substitua o comentário pelo bloco correspondente.
 
 ---
 
-### Passo 1 — Carregar gear items no `useEffect`
+### Passo 1 — Carregar setup e gear items juntos
 
-Substitua o `// TODO: passo 1` por:
+Atualmente o `useEffect` não busca nada. Precisamos fazer duas requisições ao mesmo tempo: uma para buscar os dados do setup e outra para buscar os gear items que pertencem a ele. Usar `Promise.all` garante que as duas chamadas acontecem em paralelo, sem esperar uma terminar para começar a outra. O resultado é guardado no estado com `setSetup` e `setGearItems`.
 
 ```tsx
 const [setupData, gearData] = await Promise.all([
@@ -109,9 +109,9 @@ setGearItems(gearData);
 
 ---
 
-### Passo 2 — Cadastrar e editar gear item (`handleGearSubmit`)
+### Passo 2 — Cadastrar e editar gear item
 
-Substitua o `// TODO: passo 2` por:
+A função `handleGearSubmit` é chamada tanto ao criar quanto ao editar um gear item. O parâmetro `_gearId` é o diferenciador: se ele vier preenchido, é uma edição; se for `undefined`, é um cadastro novo. Após a operação, atualizamos `gearItems` no estado local para a tela refletir a mudança sem precisar recarregar a página.
 
 ```tsx
 if (!setup) return;
@@ -132,9 +132,9 @@ toast.success("Item adicionado com sucesso.");
 
 ---
 
-### Passo 3 — Excluir gear item (`handleGearRemove`)
+### Passo 3 — Excluir gear item
 
-Substitua o `// TODO: passo 3` por:
+A função `handleGearRemove` recebe o `_gearId` do item a ser removido. Primeiro fazemos a chamada à API para deletar o registro no banco. Depois, sem precisar buscar a lista novamente, filtramos o estado local removendo apenas aquele item — a tela atualiza instantaneamente.
 
 ```tsx
 await gearItemService.remove(_gearId);
