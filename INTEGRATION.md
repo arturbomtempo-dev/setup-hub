@@ -85,52 +85,61 @@ O CRUD completo — tanto de **setup** quanto de **gear items** — está totalm
 
 ---
 
-## Como a integração de gear items funciona
+## Como integrar — passo a passo
 
-Toda a lógica de gear items vive em `src/pages/SetupDetailsPage/index.tsx`.
+Abra `src/pages/SetupDetailsPage/index.tsx`. Você vai encontrar três comentários `// TODO`. Para cada um, **selecione a linha do comentário, apague e cole o bloco correspondente abaixo**.
 
-### Carregando setup e gear items juntos
+---
 
-O `useEffect` usa `Promise.all` para disparar as duas requisições ao mesmo tempo, evitando waterfalls:
+### Passo 1 — Carregar gear items no `useEffect`
+
+Substitua o `// TODO: passo 1` por:
 
 ```tsx
 const [setupData, gearData] = await Promise.all([
   setupService.getById(id),
   gearItemService.listBySetup(id),
 ]);
+
+if (!isMounted) return;
+
 setSetup(setupData);
 setGearItems(gearData);
 ```
 
-### Cadastrar e editar — `handleGearSubmit`
+---
 
-A mesma função serve tanto para criar quanto para editar. O `gearId` é o diferenciador:
+### Passo 2 — Cadastrar e editar gear item (`handleGearSubmit`)
+
+Substitua o `// TODO: passo 2` por:
 
 ```tsx
-async function handleGearSubmit(payload: GearItemPayload, gearId?: string) {
-  if (gearId) {
-    // Editar item existente
-    const updated = await gearItemService.update(gearId, payload);
-    setGearItems(
-      gearItems.map((item) => (item.id === updated.id ? updated : item)),
-    );
-  } else {
-    // Criar novo item
-    const created = await gearItemService.create(payload);
-    setGearItems([...gearItems, created]);
-  }
+if (!setup) return;
+
+if (_gearId) {
+  const updated = await gearItemService.update(_gearId, _payload);
+  setGearItems(
+    gearItems.map((item) => (item.id === updated.id ? updated : item)),
+  );
+  toast.success("Item atualizado com sucesso.");
+  return;
 }
+
+const created = await gearItemService.create(_payload);
+setGearItems([...gearItems, created]);
+toast.success("Item adicionado com sucesso.");
 ```
 
-### Excluir — `handleGearRemove`
+---
 
-Remove da API e filtra o estado local sem precisar de um novo `GET`:
+### Passo 3 — Excluir gear item (`handleGearRemove`)
+
+Substitua o `// TODO: passo 3` por:
 
 ```tsx
-async function handleGearRemove(gearId: string) {
-  await gearItemService.remove(gearId);
-  setGearItems(gearItems.filter((item) => item.id !== gearId));
-}
+await gearItemService.remove(_gearId);
+setGearItems(gearItems.filter((item) => item.id !== _gearId));
+toast.success("Item removido com sucesso.");
 ```
 
 ---

@@ -42,15 +42,7 @@ export function SetupDetailsPage() {
         async function loadSetupData() {
             try {
                 setIsLoading(true);
-                const [setupData, gearData] = await Promise.all([
-                    setupService.getById(id),
-                    gearItemService.listBySetup(id),
-                ]);
-
-                if (!isMounted) return;
-
-                setSetup(setupData);
-                setGearItems(gearData);
+                // TODO: passo 1 — substitua este comentário pelo bloco do INTEGRATION.md
             } catch (error) {
                 toast.error(getErrorMessage(error));
             } finally {
@@ -71,50 +63,12 @@ export function SetupDetailsPage() {
 
     const totalGear = useMemo(() => gearItemService.sumPrices(gearItems), [gearItems]);
 
-    async function updateEstimatedCost(nextGearItems: GearItemResponse[]) {
-        if (!setup) return;
-
-        const nextEstimatedCost = gearItemService.toEstimatedCost(
-            nextGearItems,
-            setup.estimatedCost
-        );
-
-        const updatedSetup = await setupService.update(setup.id, {
-            title: setup.title,
-            description: setup.description,
-            category: setup.category,
-            imageUrl: setup.imageUrl,
-            estimatedCost: nextEstimatedCost,
-        });
-
-        setSetup(updatedSetup);
+    async function handleGearSubmit(_payload: GearItemPayload, _gearId?: string) {
+        // TODO: passo 2 — substitua este comentário pelo bloco do INTEGRATION.md
     }
 
-    async function handleGearSubmit(payload: GearItemPayload, gearId?: string) {
-        if (!setup) return;
-
-        if (gearId) {
-            const updated = await gearItemService.update(gearId, payload);
-            const nextItems = gearItems.map((item) => (item.id === updated.id ? updated : item));
-            setGearItems(nextItems);
-            await updateEstimatedCost(nextItems);
-            toast.success('Item atualizado com sucesso.');
-            return;
-        }
-
-        const created = await gearItemService.create(payload);
-        const nextItems = [...gearItems, created];
-        setGearItems(nextItems);
-        await updateEstimatedCost(nextItems);
-        toast.success('Item adicionado com sucesso.');
-    }
-
-    async function handleGearRemove(gearId: string) {
-        await gearItemService.remove(gearId);
-        const nextItems = gearItems.filter((item) => item.id !== gearId);
-        setGearItems(nextItems);
-        await updateEstimatedCost(nextItems);
-        toast.success('Item removido com sucesso.');
+    async function handleGearRemove(_gearId: string) {
+        // TODO: passo 3 — substitua este comentário pelo bloco do INTEGRATION.md
     }
 
     async function handleDeleteSetup() {
