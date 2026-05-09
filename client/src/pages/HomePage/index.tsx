@@ -3,11 +3,10 @@ import { EmptyState } from '@/components/EmptyState';
 import { Navbar } from '@/components/Navbar';
 import { SetupCard } from '@/components/SetupCard';
 import { Button } from '@/components/ui/button';
-import { formatCurrency } from '@/lib/format';
-import { gearItemService, setupService } from '@/services/setup-service';
+import { setupService } from '@/services/setup-service';
 import type { SetupWithGear } from '@/types/api';
 import { ArrowRight, SearchX } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 export function HomePage() {
@@ -17,35 +16,14 @@ export function HomePage() {
     useEffect(() => {
         let isMounted = true;
 
-        async function loadData() {
+        async function loadSetups() {
             try {
                 setIsLoading(true);
-                const [setupList, gearList] = await Promise.all([
-                    setupService.list(),
-                    gearItemService.listAll(),
-                ]);
-
+                const list = await setupService.list();
                 if (!isMounted) return;
-
-                const gearBySetupId = new Map<string, typeof gearList>();
-                gearList.forEach((gearItem) => {
-                    const current = gearBySetupId.get(gearItem.setupId) ?? [];
-                    current.push(gearItem);
-                    gearBySetupId.set(gearItem.setupId, current);
-                });
-
-                const merged = setupList.map((setup) => {
-                    const gear = gearBySetupId.get(setup.id) ?? [];
-                    return {
-                        ...setup,
-                        gear,
-                        estimatedCost: gearItemService.toEstimatedCost(gear, setup.estimatedCost),
-                    };
-                });
-
-                setSetups(merged);
+                setSetups(list.map((setup) => ({ ...setup, gear: [] })));
             } catch {
-                // silently fall through to empty state
+                // fall through to empty state
             } finally {
                 if (isMounted) {
                     setIsLoading(false);
@@ -53,22 +31,12 @@ export function HomePage() {
             }
         }
 
-        loadData();
+        loadSetups();
 
         return () => {
             isMounted = false;
         };
     }, []);
-
-    const publishedCount = useMemo(() => setups.length, [setups]);
-    const totalGearItems = useMemo(
-        () => setups.reduce((total, setup) => total + setup.gear.length, 0),
-        [setups]
-    );
-    const totalEstimated = useMemo(
-        () => setups.reduce((total, setup) => total + setup.estimatedCost, 0),
-        [setups]
-    );
 
     return (
         <div className="min-h-screen">
@@ -110,15 +78,6 @@ export function HomePage() {
                                 <a href="#galeria">Explorar galeria</a>
                             </Button>
                         </div>
-
-                        <div className="grid gap-3 pt-4 text-left sm:grid-cols-3">
-                            <MetricCard label="Publicados" value={String(publishedCount)} />
-                            <MetricCard label="Itens cadastrados" value={String(totalGearItems)} />
-                            <MetricCard
-                                label="Investimento total"
-                                value={formatCurrency(totalEstimated)}
-                            />
-                        </div>
                     </div>
                 </div>
             </section>
@@ -132,9 +91,6 @@ export function HomePage() {
                         <h2 className="mt-2 font-display text-4xl font-normal tracking-tight md:text-5xl">
                             Todos os setups
                         </h2>
-                    </div>
-                    <div className="hidden text-sm text-muted-foreground md:block">
-                        {publishedCount} publicados
                     </div>
                 </div>
 
@@ -159,17 +115,6 @@ export function HomePage() {
                     </div>
                 )}
             </section>
-        </div>
-    );
-}
-
-function MetricCard({ label, value }: { label: string; value: string }) {
-    return (
-        <div className="rounded-2xl border border-border/60 bg-background/40 px-4 py-3 backdrop-blur-md">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                {label}
-            </div>
-            <div className="mt-1 font-mono text-sm font-semibold text-foreground">{value}</div>
         </div>
     );
 }

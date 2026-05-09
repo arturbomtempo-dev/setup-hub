@@ -135,7 +135,7 @@ export function GearDialog({
                         <Input
                             type="number"
                             min={0}
-                            step={10}
+                            step={1}
                             value={price}
                             onChange={(e) => setPrice(e.target.value)}
                             required
