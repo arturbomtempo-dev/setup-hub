@@ -24,6 +24,7 @@ import {
 } from '@/services/setup-service';
 import type { SetupResponse } from '@/types/api';
 import { ArrowLeft, Calendar, Pencil, Plus, SearchX, Trash2 } from 'lucide-react';
+import { AxiosError } from 'axios';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -41,13 +42,15 @@ export function SetupDetailsPage() {
         async function loadSetupData() {
             try {
                 setIsLoading(true);
-                const setupData = await setupService.getById(id);
+                const [setupData, gearData] = await Promise.all([
+                    setupService.getById(id),
+                    gearItemService.listBySetup(id),
+                ]);
 
                 if (!isMounted) return;
 
                 setSetup(setupData);
-                // TODO: Integração com a API — buscar os gear items deste setup
-                // Dica: use gearItemService.listBySetup(id) e armazene com setGearItems(gearData)
+                setGearItems(gearData);
             } catch (error) {
                 toast.error(getErrorMessage(error));
             } finally {
@@ -68,16 +71,50 @@ export function SetupDetailsPage() {
 
     const totalGear = useMemo(() => gearItemService.sumPrices(gearItems), [gearItems]);
 
-    async function handleGearSubmit(_payload: GearItemPayload, _gearId?: string) {
-        // TODO: Integração com a API
-        // - Se _gearId existir: editar com gearItemService.update(_gearId, _payload)
-        // - Se não: cadastrar com gearItemService.create(_payload)
-        // Após a operação, atualize o estado gearItems com setGearItems
+    async function updateEstimatedCost(nextGearItems: GearItemResponse[]) {
+        if (!setup) return;
+
+        const nextEstimatedCost = gearItemService.toEstimatedCost(
+            nextGearItems,
+            setup.estimatedCost
+        );
+
+        const updatedSetup = await setupService.update(setup.id, {
+            title: setup.title,
+            description: setup.description,
+            category: setup.category,
+            imageUrl: setup.imageUrl,
+            estimatedCost: nextEstimatedCost,
+        });
+
+        setSetup(updatedSetup);
     }
 
-    async function handleGearRemove(_gearId: string) {
-        // TODO: Integração com a API — chamar gearItemService.remove(_gearId)
-        // Após remover: setGearItems(gearItems.filter((item) => item.id !== _gearId))
+    async function handleGearSubmit(payload: GearItemPayload, gearId?: string) {
+        if (!setup) return;
+
+        if (gearId) {
+            const updated = await gearItemService.update(gearId, payload);
+            const nextItems = gearItems.map((item) => (item.id === updated.id ? updated : item));
+            setGearItems(nextItems);
+            await updateEstimatedCost(nextItems);
+            toast.success('Item atualizado com sucesso.');
+            return;
+        }
+
+        const created = await gearItemService.create(payload);
+        const nextItems = [...gearItems, created];
+        setGearItems(nextItems);
+        await updateEstimatedCost(nextItems);
+        toast.success('Item adicionado com sucesso.');
+    }
+
+    async function handleGearRemove(gearId: string) {
+        await gearItemService.remove(gearId);
+        const nextItems = gearItems.filter((item) => item.id !== gearId);
+        setGearItems(nextItems);
+        await updateEstimatedCost(nextItems);
+        toast.success('Item removido com sucesso.');
     }
 
     async function handleDeleteSetup() {
@@ -88,7 +125,18 @@ export function SetupDetailsPage() {
             toast.success('Setup removido com sucesso.');
             navigate('/');
         } catch (error) {
-            toast.error(getErrorMessage(error));
+            if (error instanceof AxiosError) {
+                const status = error.response?.status;
+                if (status === 409 || status === 500) {
+                    toast.error(
+                        'Este setup possui itens vinculados. Remova todos os gear items antes de excluí-lo.',
+                    );
+                } else {
+                    toast.error(getErrorMessage(error));
+                }
+            } else {
+                toast.error(getErrorMessage(error));
+            }
         }
     }
 

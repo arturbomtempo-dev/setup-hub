@@ -68,72 +68,69 @@ Cada função usa a instância `api` do Axios e valida os dados recebidos com **
 
 ---
 
-## O que está implementado e o que vamos integrar
+## O que está implementado
 
-A base do projeto já está montada. O CRUD completo de **setup** (criar, listar, carregar, editar e deletar) está **totalmente integrado** com a API e funcionando. Use esses arquivos como referência — eles mostram exatamente o padrão que você vai replicar para os gear items:
+O CRUD completo — tanto de **setup** quanto de **gear items** — está totalmente integrado com a API. Use os arquivos abaixo como referência para entender o padrão adotado:
 
-| Operação       | Arquivo                                | Função/Local                                  |
-| -------------- | -------------------------------------- | --------------------------------------------- |
-| Listar setups  | `src/pages/HomePage/index.tsx`         | `useEffect` → `setupService.list()`           |
-| Criar setup    | `src/pages/NewSetupPage/index.tsx`     | `handleCreate` → `setupService.create()`      |
-| Carregar setup | `src/pages/SetupDetailsPage/index.tsx` | `useEffect` → `setupService.getById(id)`      |
-| Editar setup   | `src/pages/EditSetupPage/index.tsx`    | `handleUpdate` → `setupService.update()`      |
-| Deletar setup  | `src/pages/SetupDetailsPage/index.tsx` | `handleDeleteSetup` → `setupService.remove()` |
-
----
-
-## O que vamos implementar juntos — CRUD de Gear Items
-
-Todos os métodos de gear items em `src/pages/SetupDetailsPage/index.tsx` estão com comentários `// TODO`. Esses são os quatro pontos que vamos integrar, em ordem:
+| Operação              | Arquivo                                | Função/Local                                        |
+| --------------------- | -------------------------------------- | --------------------------------------------------- |
+| Listar setups         | `src/pages/HomePage/index.tsx`         | `useEffect` → `setupService.list()`                 |
+| Criar setup           | `src/pages/NewSetupPage/index.tsx`     | `handleCreate` → `setupService.create()`            |
+| Carregar setup + gear | `src/pages/SetupDetailsPage/index.tsx` | `useEffect` → `Promise.all([getById, listBySetup])` |
+| Editar setup          | `src/pages/EditSetupPage/index.tsx`    | `handleUpdate` → `setupService.update()`            |
+| Deletar setup         | `src/pages/SetupDetailsPage/index.tsx` | `handleDeleteSetup` → `setupService.remove()`       |
+| Cadastrar gear item   | `src/pages/SetupDetailsPage/index.tsx` | `handleGearSubmit` → `gearItemService.create()`     |
+| Editar gear item      | `src/pages/SetupDetailsPage/index.tsx` | `handleGearSubmit` → `gearItemService.update()`     |
+| Excluir gear item     | `src/pages/SetupDetailsPage/index.tsx` | `handleGearRemove` → `gearItemService.remove()`     |
 
 ---
 
-### 1. Listar gear items do setup — `useEffect`
+## Como a integração de gear items funciona
 
-Ao carregar a página de detalhes, além do setup já buscado, precisamos buscar os itens do gear deste setup. O `id` vem do `useParams()` — é o ID do setup na URL.
+Toda a lógica de gear items vive em `src/pages/SetupDetailsPage/index.tsx`.
+
+### Carregando setup e gear items juntos
+
+O `useEffect` usa `Promise.all` para disparar as duas requisições ao mesmo tempo, evitando waterfalls:
 
 ```tsx
-// Dentro do useEffect, após setSetup(setupData):
-const gearData = await gearItemService.listBySetup(id);
+const [setupData, gearData] = await Promise.all([
+  setupService.getById(id),
+  gearItemService.listBySetup(id),
+]);
+setSetup(setupData);
 setGearItems(gearData);
 ```
 
----
+### Cadastrar e editar — `handleGearSubmit`
 
-### 2. Cadastrar gear item — `handleGearSubmit` (sem `_gearId`)
-
-Quando `_gearId` não é fornecido, estamos criando um novo item:
+A mesma função serve tanto para criar quanto para editar. O `gearId` é o diferenciador:
 
 ```tsx
-const created = await gearItemService.create(_payload);
-setGearItems([...gearItems, created]);
-toast.success("Item adicionado com sucesso.");
+async function handleGearSubmit(payload: GearItemPayload, gearId?: string) {
+  if (gearId) {
+    // Editar item existente
+    const updated = await gearItemService.update(gearId, payload);
+    setGearItems(
+      gearItems.map((item) => (item.id === updated.id ? updated : item)),
+    );
+  } else {
+    // Criar novo item
+    const created = await gearItemService.create(payload);
+    setGearItems([...gearItems, created]);
+  }
+}
 ```
 
----
+### Excluir — `handleGearRemove`
 
-### 3. Editar gear item — `handleGearSubmit` (com `_gearId`)
-
-Quando `_gearId` é fornecido, estamos atualizando um item existente:
+Remove da API e filtra o estado local sem precisar de um novo `GET`:
 
 ```tsx
-const updated = await gearItemService.update(_gearId, _payload);
-setGearItems(
-  gearItems.map((item) => (item.id === updated.id ? updated : item)),
-);
-toast.success("Item atualizado com sucesso.");
-```
-
----
-
-### 4. Excluir gear item — `handleGearRemove`
-
-Remove o item da API e atualiza o estado local filtrando a lista:
-
-```tsx
-await gearItemService.remove(_gearId);
-setGearItems(gearItems.filter((item) => item.id !== _gearId));
-toast.success("Item removido com sucesso.");
+async function handleGearRemove(gearId: string) {
+  await gearItemService.remove(gearId);
+  setGearItems(gearItems.filter((item) => item.id !== gearId));
+}
 ```
 
 ---
